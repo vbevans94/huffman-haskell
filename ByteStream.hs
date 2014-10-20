@@ -10,7 +10,6 @@ import System.Environment
 
 import Control.Monad
 
-
 data Info = Info {
 	offset :: Int
 	, size :: Int
@@ -28,7 +27,9 @@ bitsToBytes [] = (Info {size = 0, offset = 0}, [])
 bitsToBytes bits = (fst bitChunks, map bitsToByte $ snd $ bitChunks)
 	where 
 		bitChunks = getChunks bits
-		bitsToByte = foldl (\byte bit -> byte * 2 + if bit then 1 else 0) 0
+
+bitsToByte :: [Bool] -> Word8
+bitsToByte = foldl (\byte bit -> byte * 2 + if bit then 1 else 0) 0
 
 getChunks :: [Bool] -> BitChunks
 getChunks [] = (Info {size = 0, offset = 0}, [])
@@ -48,9 +49,6 @@ byteToBits nDigits byte
 	| otherwise = let (count, lowerBits) = (byteToBits (nDigits - 1) (byte `div` 2))
 					in (nDigits, lowerBits ++ [(if byte `mod` 2 == 1 then True else False)])
 
-bytesToInts :: B.ByteString -> [Int]
-bytesToInts = reverse . B.foldl (\ints byte -> (fromInteger $ toInteger byte) : ints) []
-
 {-here's how it converts: 1026 -> [2, 4]-}
 toWord8 :: Int -> [Word8]
 toWord8 x
@@ -64,37 +62,3 @@ toWord8 x
 
 fromWord8 :: [Word8] -> Int
 fromWord8 = foldr (\byte integer -> integer * 256 + (fromInteger $ toInteger byte)) 0
-
-{-<_size: size of __size(1 byte)><__size: size of _content in bytes(_size bytes)><_offset: count of non-empty bits in last byte(1 byte)><_content: bits as bytes(__size bytes)>-}
-bitsToFile :: String -> [Bool] -> IO ()
-bitsToFile fileName bits = withFile fileName WriteMode (\handle -> do
-	let (Info {size = len, offset = offs}, words) = bitsToBytes bits
-	
-	let lengthAsBytes = toWord8 len
-
-	B.hPut handle
-		$ B.cons (fromInteger (toInteger $ length lengthAsBytes))
-			$ B.append (B.pack lengthAsBytes)
-				$ B.cons (fromInteger (toInteger offs))
-					$ B.pack words
-	)
-
-{-fetch from file formatted by the function above-}
-bitsFromFile :: String -> IO ([Bool])
-bitsFromFile fileName = withFile fileName ReadMode (\handle -> do
-	contents <- B.hGetContents handle
-
-	let (sizeSizeString, rest) = B.splitAt 1 contents
-	let sizeSize = toInteger ((B.unpack $ sizeSizeString) !! 0)
-	let sizeInt = (fromInteger sizeSize)
-	
-	let (sizeString, restRest) = B.splitAt sizeInt rest
-	let size = fromWord8 $ B.unpack sizeString
-	
-	let (offsetString, bytes) = B.splitAt (sizeInt) restRest
-	let offset = fromInteger $ toInteger ((B.unpack $ offsetString) !! 0)
-
-	let allBits = bytesToBits bytes
-
-	return (take (length allBits - 8 + offset) allBits)
-	)

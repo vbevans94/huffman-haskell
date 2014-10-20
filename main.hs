@@ -14,21 +14,13 @@ import Huffman
 import ByteStream
 
 main = do
-	[srcName, destName] <- getArgs
+	[commandArg, srcName, destName] <- getArgs
 
-	withFile srcName ReadMode (\handle -> do
-		contents <- hGetContents handle
+	let (Just command) = lookup commandArg commands
 
-		let hTree = stringTree contents
-		let encodedBits = encode' hTree contents :: [Bool]
+	command srcName destName
 
-		{-write to file encoded-}
-		bitsToFile destName encodedBits
-
-		{-get from file encoded-}
-		bits <- bitsFromFile destName
-
-		putStrLn $ decode hTree bits
-
-		return ()
-		)
+commands :: [(String, (String -> String -> IO ()))]  
+commands = [("decode", decodeFile),
+			("encode", encodeFile)
+		]
