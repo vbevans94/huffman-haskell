@@ -1,0 +1,9 @@
+Frameworks can be designed to make their execution logic extensible by dynamic code loading at runtime.
+
+We have created a sample app to demonstrate the partitioning of dex files and runtime class loading. (Note that for reasons discussed below, the app cannot be built with the ADT Eclipse plug-in. Instead, use the included Ant build script. See Readme.txt for detail.)
+
+The app has a simple Activity that invokes a library component to display a Toast. The Activity and its resources are kept in the default dex, whereas the library code is stored in a secondary dex bundled in the APK. This requires a modified build process, which is shown below in detail.
+
+Before the library method can be invoked, the app has to first explicitly load the secondary dex file. Lets take a look at the relevant moving parts.
+
+Code Organization
